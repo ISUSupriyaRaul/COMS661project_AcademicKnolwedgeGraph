@@ -1,17 +1,15 @@
-
+## Create a knowledge graph of a specific research interest as (publication title, [authors], [affiliations]) triples
 #!/usr/bin/python
 ## wget -N http://dblp.uni-trier.de/xml/dblp.xml.gz
 ## then run this script
-import json, gzip, os, sys, xml.sax  #codecs, collections,
+import json, gzip, os, sys, xml.sax
 import scholarly
 import PySimpleGUI as sg    
-#import numpy as np
 
 
 sg.change_look_and_feel('SystemDefault')      
-layout = [[sg.Text('Please insert your research interest below.')], # retrieves the list of publications having the title with the given keywords
+layout = [[sg.Text('Please insert your research  interest below.')], # retrieves the list of publications having the title with the given keywords
           [sg.Text('Topic of Interest', size=(15, 1)), sg.InputText()],
-#          [sg.Input(key='-IN-')],      
           [sg.Button('Search'), sg.Exit()]]    
 window = sg.Window('DBLP Exploration Window', layout)      
 event, values = window.read() 
@@ -32,10 +30,10 @@ class DBLPHandler (xml.sax.ContentHandler):
     self.out = out
     self.paper = None
     self.authors = []
-    self.year = None
     self.affiliation = []
     self.querycount = 0
     self.text = ''
+    self.insertedpapercount = 0
     self.papercount = 0
     self.edgecount = 0
 
@@ -48,8 +46,7 @@ class DBLPHandler (xml.sax.ContentHandler):
       self.paper = str (attrs['key'])
       self.authors = []
       self.affiliation = []
-      self.year = None
-    elif name in ['author', 'year', 'title']:
+    elif name in ['author', 'title']:
       self.text = ''
   def endElement (self, name):
     # Signals the end of an element in non-namespace mode.
@@ -57,10 +54,6 @@ class DBLPHandler (xml.sax.ContentHandler):
     # Attributes objects implement a portion of the mapping protocol, including the methods get(), has_key(), keys(), and values(). 
     if name == 'author':
       self.authors.append (self.text)
-#    if name == 'year' and self.text is None:
-##     print("year  " + (self.text.strip ()))
-##      self.year = int(self.text.strip ())
-#    elif name == 'title' and "foveated" in self.text.lower() and "rendering" in self.text.lower():
     elif name == 'title' and all(word in self.text.lower() for word in self.contextSplitWords):
       self.paper += (" " + self.text)
       self.write_paper ()
@@ -68,25 +61,26 @@ class DBLPHandler (xml.sax.ContentHandler):
       
   def write_paper (self):
     if self.papercount:        
-        with gzip.open(self.out, 'wt') as zipfile: #utf-8 , encoding="utf-8"
+        with gzip.open(self.out, 'wt') as zipfile: 
             zipfile.write (',\n')
             
     self.papercount += 1
     self.edgecount += len (self.authors)
     
     for author in self.authors:
+#        self.affiliation.append(" dummy ")
         self.affiliation.append(self.getGoogleScholarInfo(author))
 
-    with gzip.open(self.out, 'wt') as zipfile: #, encoding="utf-8"
-        print("Info " , [self.paper, self.authors, self.affiliation])
-#        val = self.papercount + "  " + " Title " +self.paper+ "\n Authors "+ self.authors+ "\n Affiliations "+ self.affiliation
-#        np.savetxt('Publication_Results.txt', val )
+    with gzip.open(self.out, 'wt') as zipfile:
+        self.insertedpapercount += 1
+        print("Paper %d " %(self.insertedpapercount) , [self.paper, self.authors, self.affiliation])
         json.dump ([self.paper, self.authors, self.affiliation], zipfile)
 # dump() method for writing data to files. dumps() method writes to a Python string
 
     if self.papercount % report_frequency == 0:
       print('... processed %d papers, %d edges so far ...' % (self.papercount, self.edgecount))
       sys.stdout.flush ()
+      
   def characters (self, chars):
     # ContentHandler.characters(content) - Receive notification of character data.
     #The Parser will call this method to report each chunk of character data. SAX parsers may return all contiguous 
@@ -111,7 +105,7 @@ def force ():
 
   xmlfile = gzip.GzipFile (xml_filename, 'r')
   out = gzip.GzipFile (tmp_filename, 'w')
-  with gzip.open(out, 'wt') as zipfile: #, encoding="utf-8"
+  with gzip.open(out, 'wt') as zipfile: 
       zipfile.write('[\n')
  # encoding/serialization- process of writing data to the disk   
   dblp = DBLPHandler (out)
@@ -119,7 +113,7 @@ def force ():
   # xml.sax.parse(filename_or_stream, handler)
   # Create a SAX parser and use it to parse a document. The document, passed in as filename_or_stream, can be a filename or a file object. 
   # The handler parameter needs to be a SAX ContentHandler instance. 
-  with gzip.open(out, 'wt') as zipfile: #, encoding="utf-8"
+  with gzip.open(out, 'wt') as zipfile:
       zipfile.write('\n]\n')
   out.close ()
   os.rename (tmp_filename, json_gz_filename)
@@ -148,7 +142,7 @@ def open ():
       return read_file
 
 def papers ():
-  with gzip.open(open(), 'rt') as file: #, encoding="utf-8"
+  with gzip.open(open(), 'rt') as file: 
      for i, line in enumerate(file):
          print('\n')
          print("----File number %d---- " %i)

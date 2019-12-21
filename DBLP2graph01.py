@@ -1,3 +1,4 @@
+##Extract a knowledge graph with (author, affiliation, publication title) triples from the previously built knowledge graph 
 #!/usr/bin/python
 ## wget -N http://dblp.uni-trier.de/xml/dblp.xml.gz
 ## then run this script
